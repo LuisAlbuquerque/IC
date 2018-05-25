@@ -1,0 +1,4 @@
+cliente:
+
+- chama taxi
+- agenda com central

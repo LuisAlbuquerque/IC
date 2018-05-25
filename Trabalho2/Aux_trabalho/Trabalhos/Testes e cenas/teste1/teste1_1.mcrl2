@@ -1,0 +1,43 @@
+sort
+    Viatura = struct one;
+    Central;
+
+act
+    sai, reg, conSai, conReg, horario, rec, fcr, alo, snr,conSnr, snf,conSnf, contactaCentral, anu , tic,conTic,local: Viatura; % Ações da Viatura. det,conDet,extra
+    sendCar; % : Central; % Ações Central
+
+proc
+    Viaturas =
+        Start.Viaturas;  % Start(num viatura)
+
+    Start = sai(one).
+    (
+        ( rec(one).snr(one).fcr(one).snf(one) ) +
+        ( alo(one).( snr(one).fcr(one).snf(one) + anu(one).snf(one) ) ) +
+        tic(one)
+    ).(reg(one) + Start);
+
+    Controlador =
+        ReceiverStart.Controlador;
+
+    ReceiverStart=conSai(one).
+    (
+        ( conSnr(one).conSnf(one) ) +
+        ( conSnr(one).conSnf(one) + conSnf(one) ) +
+        conTic(one)
+    ).(conReg(one) + ReceiverStart);
+
+init
+    %hide(
+    %  {},
+      allow(
+        {horario,rec,fcr,alo,contactaCentral,anu,local},
+        comm(
+            { sai|conSai -> horario,
+              reg|conReg -> horario,
+              snr|conSnr -> contactaCentral,
+              snf|conSnf -> contactaCentral,
+              tic|conTic -> local
+            },
+            Viaturas || Controlador
+     ) ) ;

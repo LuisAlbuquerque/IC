@@ -1,0 +1,113 @@
+sort
+	Coin = struct five | ten | twenty | fifty;
+	Product = struct Apple | Chocolate | Coffee;
+	Stock = Bag(Product);
+	Bank = Bag(Coin);
+	PairProduct = struct pair(fst:Product, snd:Int);
+
+act
+	ins, acc, coin, ret :Coin;
+	opt, pay, request, ready, ok, product_ready, deny, product_denied :Product;
+	supply, demand, refill:PairProduct;
+	change, changeS;
+
+map
+	troco: Nat # Bank -> List(Coin);
+	sub: Nat # Coin -> Nat;
+	remove: List(Coin) # Coin -> List(Coin);
+
+var
+	total:Nat;
+	bank:Bank;
+	coin:Coin;
+	lista:List(Coin);
+
+eqn
+	(coin==fifty)  -> sub(total,coin) = Int2Nat(total-50);
+	(coin==twenty) -> sub(total,coin) = Int2Nat(total-20);
+	(coin==ten)    -> sub(total,coin) = Int2Nat(total-10);
+	(coin==five)   -> sub(total,coin) = Int2Nat(total-5);
+
+	(lista == []) -> remove(lista,coin) = [];
+	(coin == head(lista)) -> remove(lista,coin) = tail(lista);
+	(coin != head(lista)) -> remove(lista,coin) = [coin] ++ remove(tail(lista),coin);
+
+	((total>=50) && ((bank * {fifty:1}) != {:})) -> troco(total, bank) = [fifty] ++ troco(Int2Nat(total-50),bank - {fifty:1});
+	((total>=50) && ((bank * {twenty:1}) != {:})) -> troco(total, bank) = [twenty] ++ troco(Int2Nat(total-20),bank - {twenty:1});
+	((total>=50) && ((bank * {ten:1}) != {:})) -> troco(total, bank) = [ten] ++ troco(Int2Nat(total-10),bank - {ten:1});
+	((total>=50) && ((bank * {five:1}) != {:})) -> troco(total, bank) = [five] ++ troco(Int2Nat(total-5),bank - {five:1});
+	((total>=50) && ((bank * {five:1,ten:1,twenty:1,fifty:1}) == {:})) -> troco(total, bank) = [];
+
+	((total>=20) && (total<50) && ((bank * {twenty:1}) != {:})) -> troco(total, bank) = [twenty] ++ troco(Int2Nat(total-20),bank - {twenty:1});
+	((total>=20) && (total<50) && ((bank * {ten:1}) != {:})) -> troco(total, bank) = [ten] ++ troco(Int2Nat(total-10),bank - {ten:1});
+	((total>=20) && (total<50) && ((bank * {five:1}) != {:})) -> troco(total, bank) = [five] ++ troco(Int2Nat(total-5),bank - {five:1});
+	((total>=20) && (total<50) && ((bank * {five:1,ten:1,twenty:1}) == {:})) -> troco(total, bank) = [];
+
+	((total>=10) && (total<20) && ((bank * {ten:1}) != {:})) -> troco(total, bank) = [ten] ++ troco(Int2Nat(total-10),bank - {ten:1});
+	((total>=10) && (total<20) && ((bank * {five:1}) != {:})) -> troco(total, bank) = [five] ++ troco(Int2Nat(total-5),bank - {five:1});
+	((total>=10) && (total<20) && ((bank * {five:1,ten:1}) == {:})) -> troco(total, bank) = [];
+
+	((total>=5) && (total<10) && ((bank * {five:1}) != {:})) -> troco(total, bank) = [five] ++ troco(Int2Nat(total-5),bank - {five:1});
+	((total>=5) && (total<10) && ((bank * {five:1}) == {:})) -> troco(total, bank) = [];
+
+	(total==0) -> troco(total,bank) = [];
+
+proc
+	User =
+		sum c:Coin.(ins(c).User) +
+		sum p:Product.(opt(p).User) +
+		changeS.User;
+
+	Supplier =
+		supply(pair(Apple,5)).Supplier +
+		supply(pair(Chocolate,5)).Supplier +
+		supply(pair(Coffee,5)).Supplier;
+
+	Returner(total:Nat, bank:Bank, lista:List(Coin)) =
+		(lista == []) -> Payment(0,bank) +
+		(lista != []) -> sum c:Coin.((c in lista) -> ret(c).Returner(sub(total,c),bank - {c:1},remove(lista,c)));
+
+	Payment(total:Nat, bank:Bank) =
+		acc(five).  ((total+5 > 60)  -> ret(five).Payment(total,bank) <> Payment(Int2Nat(total+5),bank + {five:1})) +
+		acc(ten).   ((total+10 > 60) -> ret(ten).Payment(total,bank) <> Payment(Int2Nat(total+10),bank + {ten:1})) +
+		acc(twenty).((total+20 > 60) -> ret(twenty).Payment(total,bank) <> Payment(Int2Nat(total+20),bank + {twenty:1})) +
+		acc(fifty). ((total+50 > 60) -> ret(fifty).Payment(total,bank) <> Payment(Int2Nat(total+50),bank + {fifty:1})) +
+
+		pay(Chocolate).((total >= 20) -> ok(Chocolate).Payment(Int2Nat(total-20),bank) <> deny(Chocolate).Payment(total,bank)) +
+		pay(Coffee).   ((total >= 45) -> ok(Coffee).   Payment(Int2Nat(total-45),bank) <> deny(Coffee).Payment(total,bank)) +
+		pay(Apple).    ((total >= 10) -> ok(Apple).    Payment(Int2Nat(total-10),bank) <> deny(Apple).Payment(total,bank)) +
+
+		changeS.Returner(total,bank,troco(total,bank));
+
+	Mach(stock:Stock) =
+		( (stock * {Chocolate:1}) != {:} ) ->
+			pay(Chocolate).(
+				ready(Chocolate).Mach(stock - {Chocolate:1})
+					+
+				deny(Chocolate).Mach(stock)) +
+		( (stock * {Coffee:1}) != {:} ) ->
+			pay(Coffee).(ready(Coffee).Mach(stock - {Coffee:1})
+				+
+			deny(Coffee).Mach(stock)) +
+
+		( (stock * {Apple:1}) != {:} ) ->
+			pay(Apple).
+				(ready(Apple).Mach(stock - {Apple:1})
+					+
+				deny(Apple).Mach(stock)) +
+
+		( (stock * {Apple:1}) == {:} ) -> demand(pair(Apple,5)).Mach(stock + {Apple:5}) +
+		( (stock * {Coffee:1}) == {:} ) -> demand(pair(Chocolate,5)).Mach(stock + {Chocolate:5}) +
+		( (stock * {Chocolate:1}) == {:} ) -> demand(pair(Coffee,5)).Mach(stock + {Coffee:5});
+
+init
+	allow(
+		{ coin, change, ret, refill, request, product_ready, product_denied },
+		comm({ ins|acc -> coin,
+		       changeS|changeS -> change,
+		       demand|supply -> refill,
+		       opt|pay|pay -> request,
+		       ok|ready -> product_ready,
+		       deny|deny -> product_denied },
+		User || Mach({Apple:5, Chocolate:5, Coffee:5}) || Supplier || Payment(0,{five:10, ten:10, twenty:10, fifty:10})
+	));

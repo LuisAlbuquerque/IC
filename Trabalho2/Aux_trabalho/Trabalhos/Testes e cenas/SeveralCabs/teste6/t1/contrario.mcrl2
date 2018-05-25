@@ -1,0 +1,74 @@
+sort
+    Viatura = struct a;
+    Lista = List(Viatura);
+
+act
+    sai,cr_sai,reg,cr_reg,ini,fim, rec, fcr, alo,cr_alo,agendado, snr,cr_snr,snf,cr_snf,comunica, anu,cr_anu,cancel, tic,cr_tic,local, det,cr_det,pextra, cl_rec,cl_via_rec,wave: Viatura;
+
+map 
+    add: Lista # Viatura -> Lista; 
+    remove: Lista # Viatura -> Lista;
+
+var lst: Lista;
+    v: Viatura;
+
+eqn (lst == []) -> remove(lst,v) = [];
+    (v != head(lst)) -> remove(lst,v) = [head(lst)] ++ remove(tail(lst),v);
+    (v == head(lst)) -> remove(lst,v) = tail(lst);
+
+    add(lst,v) = lst <| v;
+
+proc
+    Viaturas (lst: Lista) =
+        sum v:Viatura.((v in lst)==false) -> sai(v).S(add(lst,v));
+
+    S(lst: Lista) = 
+        sum v:Viatura.(v in lst) -> (
+%            ( cl_via_rec(v).rec(v).snr(v).( fcr(v) + cl_via_rec(v).det(v).fcr(v) ).snf(v) ) +
+            StartRace(lst,[]) +
+            ( alo(v).( snr(v).( fcr(v) + cl_via_rec(v).det(v).fcr(v) ).snf(v) + anu(v) ) ) +
+            tic(v) +
+            reg(v).(#lst>1) -> S(remove(lst,v)) <> Viaturas(remove(lst,v)) + 
+            Viaturas(lst)
+        ).S(lst);
+
+    StartRace(lst:Lista,emServ:Lista) = 
+    sum v:Viatura.(v in lst) ->
+        ( (v in emServ==false) -> 
+            cl_via_rec(v).rec(v).snr(v).StartRace(lst,add(emServ,v)) <> EndRace(lst,emServ) );
+
+    EndRace(lst:Lista,emServ:Lista) = sum v:Viatura.(v in emServ) ->
+        ( fcr(v) + cl_via_rec(v).det(v).fcr(v) ).snf(v).S(lst);
+
+
+    Controlador(lst: Lista) =
+        sum v:Viatura.((v in lst)==false) -> cr_sai(v).C(add(lst,v));
+    
+    C(lst: Lista) = 
+        sum v:Viatura.(v in lst) -> (
+            ( cr_snr(v).( cr_det(v).cr_snf(v) + cr_snf(v) ) ) +
+            ( cr_alo(v).( cr_snr(v).( cr_det(v).cr_snf(v) + cr_snf(v) ) + cr_anu(v) ) ) + 
+            cr_tic(v) +
+            cr_reg(v).(#lst>1) -> C(remove(lst,v)) <> Controlador(remove(lst,v)) + 
+            Controlador(lst) 
+        ).C(lst);
+
+    Cliente = sum v:Viatura.cl_rec(v).Cliente;
+
+
+init
+     allow(
+       {ini,fim,rec,fcr,agendado,comunica,cancel,local,pextra,wave},
+       comm(
+            { sai|cr_sai -> ini,          % Início de turno
+              reg|cr_reg -> fim,          % Fim de turno
+              snr|cr_snr -> comunica,         % Início de corrida
+              snf|cr_snf -> comunica,         % Fim de corrida
+              tic|cr_tic -> local,            % Comunicação de localização
+              det|cr_det -> pextra,           % Táxi deteta potencial cliente
+              cl_rec|cl_via_rec -> wave,      % Cliente manda parar táxi
+              alo|cr_alo -> agendado,         % Central agenda corrida de cliente
+              anu|cr_anu -> cancel            % Anulação de serviço
+            },
+            Viaturas([]) || Controlador([]) || Cliente 
+     ) ) ;

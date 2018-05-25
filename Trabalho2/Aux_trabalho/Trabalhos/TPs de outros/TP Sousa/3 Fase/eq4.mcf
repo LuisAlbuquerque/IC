@@ -1,0 +1,2 @@
+[opt(Apple)] <opt(Chocolate)> true % Partindo de um estado onde retiro uma maçã,
+									%posso chegar a um estado onde retiro um chocolate

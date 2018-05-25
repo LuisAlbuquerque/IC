@@ -1,0 +1,115 @@
+\documentclass[11pt, oneside]{article}   	% use "amsart" instead of "article" for AMSLaTeX format
+\usepackage{geometry}                		% See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   		% ... or a4paper or a5paper or ... 
+%\geometry{landscape}                		% Activate for rotated page geometry
+%\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}				% Use pdf, png, jpg, or eps§ with pdflatex; use eps in DVI mode
+								% TeX will automatically convert eps --> pdf in pdflatex		
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{imakeidx}
+
+%SetFonts
+
+%SetFonts
+
+
+\title{Assignment 1: The rope bridge - in MCRL2}
+\author{Lu\'is Albuquerque (A79010) e Rafaela Pinho (77293)}
+%\date{}							% Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+
+\newpage
+\tableofcontents 
+\newpage
+
+\section{Exercicio 1}
+\subsection{Parâmetros do processo Aventureiro }
+O Aventureiro tem duas a\c{c}\~oes possíveis. \newline
+\begin{enumerate}
+\item Atravessar a ponte no sentido start para finish: forward\_adventure\newline
+Uma vez que o m\'aximo de aventureiros a atravessar a ponte \'e 2, \'e l\'ogico  que sempre que atravessem neste sentido v\~ao aos pares. Como a identifica\c{c}\~ao dos aventureiros \'e pela sua velocidade, forward\_adventure tem como parametro dois inteiros, que corresponde \'as suas velocidades. 
+\begin{lstlisting}
+forward_flashlight: Int # Int;
+\end{lstlisting}
+
+\item Atravessar a ponte no sentido finish para start:  back\_adventure\newline
+O objetivo do problema \'e todos atrave\c{c}em a ponte, por isso o mais l\'ogico ser\'a apenas um aventureiro regressar para o "start". Da\'i os paramentro seja apenas um inteiro, a sua velocidade.   
+\begin{lstlisting}
+back_flashlight: Int;
+\end{lstlisting}
+\end{enumerate}
+
+\subsection{Processo do Aventureiro }
+ O processo Aventureiro recebe a sua posi\c{c}\~ao, ou "start" ou "finish" e a velocidade, que \'e o seu identificador. E caso a posi\c{c}\~ao seja "start"  avan\c{c}am dois aventureiros, ent\~ao escolhemos avan\c{c}ar com mais r\'apido dos dois, e com o outro. ?? mal explicado
+ \newline Caso a posi\c{c} seja "finish" pretendemos regressar ao "start", desta vez só vai um, por isso n\~ao h\'a escolhas a fazer, é apenas regressar com a velocidade "speed" que recebemos como paramentro  e mudarmos o estado para "start".
+\newline(falta acabar de explicar)
+\begin{lstlisting}
+proc Adventurer (pos:Position , speed:Int) =
+	(pos == start ) ->
+	sum s: Int .(s > speed)->
+		foward_adventure(speed,s ).Adventure(finish,speed)
+		<>
+		foward_adventure(s,speed).Adventure(finish,speed)
+	<>
+	back_adventure(speed).Adventure(start,speed);
+\end{lstlisting}
+
+
+\section{Exercicio 2}
+\subsection{Inicializar os 4 aventureiros e a lanterna}
+Os aventureiros come\c{c}am todos do lado "start" e com a sua respetiva velocidade.  Para os colucar em paralelo usamos " | |".
+
+\begin{lstlisting}
+init
+  Adventure(start,1) || Adventure(start,2) || Adventure(start,5) || 
+  Adventure(start,10) || Flashligth(start) 
+  Flashligth(start) ;
+\end{lstlisting}
+\subsection{Comunica\c{c}\~ao de processos}
+Para que os pro\c{c}essos comuniquem usamos o comando "comm".
+\begin{lstlisting}
+init
+ comm (
+ {
+  forward_adventurer | foward_adventurer | forward_flashligth -> forward, 
+  back_adventurer | back_flashligth -> back	 
+  },
+  
+  Adventure(start,1) || Adventure(start,2) || Adventure(start,5) || 
+  Adventure(start,10) || Flashligth(start) 
+);
+\end{lstlisting}
+
+\subsection{Garantir que apenas as a\c{c}\~oes "forward" e "back" possam ocorrer. }
+Para que apenas os processos "forward" e "back" possam ocorrer usa-se o comando "allow"
+\begin{lstlisting}
+init
+allow({ forward, back },
+ comm (
+ {
+  forward_adventurer | foward_adventurer | forward_flashligth ->forward, 
+  back_adventurer | back_flashligth -> back	 
+  },
+  Adventure(start,1) || Adventure(start,2) || Adventure(start,5) || 
+  Adventure(start,10) || Flashligth(start) 
+  )
+);
+\end{lstlisting}
+
+\section{Exercicio 3}
+\subsection{mcrl22lps }
+\subsection{lpsxsim }
+
+\section{Exercicio 4}
+\subsection{lps2lts }
+\subsection{ltsgraph }
+\subsection{ltsview }
+
+\section{Exercicio 5}
+\end{enumerate}
+
+\printindex
+\end{document}  

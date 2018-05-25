@@ -1,0 +1,52 @@
+sort Coin = struct five | ten | twenty | fifty;   % Moedas aceites
+     Product = struct Apple | Chocolate;	    % Produtos disponiveis
+
+act
+  ins, acc, coin, ret, chg, out: Coin; 	    % ações relacionadas com as moedas inseridas, ins e chg do lado do utilizador e acc e ret
+				%do lado da máquina.
+  opt, put, ready: Product;		% ações relacionadas com os produtos.
+  prod;
+
+proc
+  User = (Insert(ten) + Insert(twenty) ).User; %No estado inicial, o utilizador apenas pode inserir moedas, 10 ou 20.
+
+Insert(n:Coin) =
+
+
+	( n == ten) -> (		% Semelhante ao if then else, se a moeda inserida foi de 10.
+		ins(ten).( opt(Apple) + ins(ten).( opt(Chocolate) + chg(twenty) ) + chg(ten) ) ) +	% após inserir uma moeda de 10
+				% os "caminhos" possiveis são: escolher uma maçã(opt(Apple), ou retirar os 10 cents inseridos, ou então
+				% inserimos outros 10 cents e aí temos outras 2 possibilidades, retirar um chocolate ou retirar 20 cents(10+10).
+	( n == twenty) -> (
+		ins(twenty).( opt(Apple).chg(ten) + opt(Chocolate) + chg(twenty) ) ) + %Se inserimos 20 cents temos 3 opções, escolher a maçã e receber 10 cents
+				% de troco, escolher um chocolate ou retirar os 20 cents.
+
+	( n == fifty) -> (
+		ins(fifty).( opt(Apple).chg(twenty).chg(twenty) + opt(Chocolate).chg(twenty).chg(ten) + chg(fifty))) ; %Se inserimos 50 cents temos 3 opções, escolher a maçã e receber duas moedas 20cent ou escolher chocolate e receber uma moeda de 20c e 10c ou receber 50 cents
+
+
+
+  Mach = (Accept(ten) + Accept(twenty) ).Mach; % Aqui é o processo responsável pelo lado da máquina, é em tudo semelhante ao do utilizador, no estado inicial
+				% temos 2 alternativas, aceitar 10 cents ou aceitar 20 cents.
+
+Accept(n:Coin) =
+	( n == ten) -> (		%Se a moedas inserida foi 10 cents as alternativas são as mesmas que acima
+		acc(ten).( put(Apple) + acc(ten).( put(Chocolate) + ret(twenty) ) + ret(ten) ) ) +
+	( n == twenty) -> (		% Se inseriu 20 cents...
+		acc(twenty).( put(Apple).ret(ten) + put(Chocolate) + ret(twenty) ) ) +
+
+	(n == fifty) -> (	%se inseriu 50 cents
+		acc(fifty).( put(Apple).ret(twenty).ret(twenty) + put(Chocolate).ret(twenty).ret(ten))) ;
+
+
+
+
+init
+  allow(
+    { coin, ready, out, prod },
+    comm(
+      { ins|acc -> coin, %um ins com um acc gera um coin
+        chg|ret -> out,  % um chg e um ret gera um out
+        opt|put -> ready }, %um opt e um put gera um ready
+      User || Mach	%no estado inicial lançamos os processos User e Mach em paralelo
+  ) ) ;

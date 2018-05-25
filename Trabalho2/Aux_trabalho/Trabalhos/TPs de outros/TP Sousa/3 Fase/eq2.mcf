@@ -1,0 +1,1 @@
+[true*] <opt(Chocolate)> false % É falso que um chocolate esteja sempre disponivel(por exemplo no estado inicial, sem inserir moedas)

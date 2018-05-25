@@ -1,0 +1,45 @@
+sort
+    Viatura = struct a|b;
+
+act
+    sai,cr_sai,reg,cr_reg,horario, rec, fcr, alo,cr_alo,agendado, snr,cr_snr,snf,cr_snf,comunica, anu,cr_anu,cancel,
+    tic,cr_tic,local, det,cr_det,pextra: Viatura; % ações da Viatura.
+
+proc
+    Viaturas =
+        sum V:Viatura.sai(V).S.Viaturas;  % Start(num viatura)
+
+    S =
+    sum V:Viatura.(
+        ( rec(V).snr(V).( fcr(V) + det(V).fcr(V) ).snf(V) ) +
+        ( alo(V).( snr(V).( fcr(V) + det(V).fcr(V) ).snf(V) + anu(V) ) ) +
+        tic(V)
+    ).(reg(V) + S);
+
+    Controlador =
+         sum V:Viatura.cr_sai(V).C.Controlador;
+
+    C =
+    sum V:Viatura.(
+        ( cr_snr(V).( cr_det(V).cr_snf(V) + cr_snf(V) ) ) +
+        ( cr_alo(V).( cr_snr(V).( cr_det(V).cr_snf(V) + cr_snf(V) ) + cr_anu(V) ) ) +
+        cr_tic(V)
+    ).(cr_reg(V) + C);
+
+
+
+init
+     allow(
+       {horario,rec,fcr,agendado,comunica,cancel,local,pextra},
+       comm(
+            { sai|cr_sai -> horario,
+              reg|cr_reg -> horario,
+              snr|cr_snr -> comunica,
+              snf|cr_snf -> comunica,
+              tic|cr_tic -> local,
+              det|cr_det -> pextra,
+              alo|cr_alo -> agendado,
+              anu|cr_anu -> cancel
+            },
+            Viaturas || Controlador
+     ) ) ;

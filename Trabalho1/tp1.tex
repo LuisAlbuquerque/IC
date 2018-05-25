@@ -1,0 +1,199 @@
+\documentclass[11pt, oneside]{article}   	% use "amsart" instead of "article" for AMSLaTeX format
+\usepackage{geometry}                		% See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   		% ... or a4paper or a5paper or ...
+%\geometry{landscape}                		% Activate for rotated page geometry
+%\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}				% Use pdf, png, jpg, or eps with pdflatex; use eps in DVI mode
+								% TeX will automatically convert eps --> pdf in pdflatex
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage{imakeidx}
+%\usepackage[latin1]{inputenc}
+%\usepackage[portuges]{babel}
+%SetFonts
+
+%SetFonts
+
+
+\title{Assignment 1: The rope bridge - in MCRL2}
+\author{Lu\'is Albuquerque (A79010) e Rafaela Pinho (A77293)}
+%\date{}							% Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+
+\newpage
+\tableofcontents
+\newpage
+
+\section{Introdu\c{c}\~ao}
+\section{Apresenta\c{c}\~ao do Exerc\'icio }
+
+\qquad " In the middle of the night, four adventurers encounter a shabby rope bridge spanning a deep ravine.\\
+
+\qquad For safety reasons, they decide that no more than 2 persons should cross the bridge at the same time and that a flashlight needs to be carried by one of them on every crossing. They have only one flashlight. The 4 adventurers are not all equally skilled: crossing the bridge takes them 1, 2, 5 and 10 minutes, respectively. A pair of adventurers cross the bridge in an amount of time equal to that of the slowest of the two adventurers.\\
+
+\qquad One of the adventurers quickly proclaims that they cannot get all four of them across in less than 19 minutes. However, one of her companions disagrees and claims that it can be done in 17 minutes. We shall verify this claim and show that there is no faster strategy using mCRL2."
+
+\qquad No ficheiro que o professor disponibilizou j\'a era dado a seguinte informa\c{c}\~ao:
+
+\begin{enumerate}
+    \item Como que deve ser codificada a posi\c{c}\~ao da lanterna e dos aventureiros;
+    \item \'E‰ nos dado a dica que os aventureiros s\~ao identificados pela velocidade;
+    \item \'E‰ nos dado o processo e as a\c{c}\~oes da lanterna.
+    \\
+     \begin{lstlisting}
+sort Position = struct start | finish;
+ act
+  % Action declarations:
+  % - 'forward'  means:  from start to finish
+  % - 'back'     means:  from finish to start
+
+  % The flashlight moves forward together with two adventurers,
+  % identified by the action's parameters.
+  forward_flashlight: Int # Int;
+
+  % The flashlight moves back together with one adventurer, identified
+  % by the action's parameter.
+  back_flashlight: Int;
+
+  % The Flashlight process models the flashlight:
+  % 1. If it is at the 'start' side, it can move forward together with any
+  %    pair of adventurers.
+  % 2. If it is at the 'finish' side, it can move back together with any
+  %    adventurer.
+  proc Flashlight(pos:Position) =
+      (pos == start) ->
+       % Case 1.
+           sum s,s':Int . forward_flashlight(s,s') . Flashlight(finish)
+        <>
+        % Case 2.
+           sum s:Int . back_flashlight(s) . Flashlight(start);
+
+    \end{lstlisting}
+\end{enumerate}
+
+
+\section{Exercicio 1}
+\subsection{Par\^ametros do processo Aventureiro }
+O Aventureiro tem duas a\c{c}\~oes poss\'i­veis. \newline
+\begin{enumerate}
+\item Atravessar a ponte no sentido start para finish: forward\_adventure\newline
+Uma vez que o m\'aximo de aventureiros a atravessar a ponte \'e 2, \'e l\'ogico  que sempre que atravessem neste sentido v\~ao aos pares. Como a identifica\c{c}\~ao dos aventureiros \'e pela sua velocidade, forward\_adventure tem como par\^ametro dois inteiros, que corresponde \'as suas velocidades.
+\begin{lstlisting}
+forward_flashlight: Int # Int;
+\end{lstlisting}
+
+\item Atravessar a ponte no sentido finish para start:  back\_adventure\newline
+O objetivo do problema \'e todos atrave\c{c}em a ponte, por isso o mais l\'ogico ser\'a apenas um aventureiro regressar para o "start". Da\'i os parâmetro seja apenas um inteiro, a sua velocidade.
+\begin{lstlisting}
+back_flashlight: Int;
+\end{lstlisting}
+\end{enumerate}
+
+\subsection{Processo do Aventureiro }
+ O processo Aventureiro recebe a sua posi\c{c}\~ao, ou "start" ou "finish" e a velocidade, que \'e o seu identificador. E caso a posi\c{c}\~ao seja "start" o pretendido \'e avan\c{c}ar para o outro lado da ponte, para isso n\'os escrevemos as possibilidades, poder\'iamos usar o operador + e fazer 
+\begin{lstlisting}
+foward_adventure(0,speed ).Adventure(finish,speed) + 
+foward_adventure(1,speed ).Adventure(finish,speed) + ...
+\end{lstlisting}
+Mas o MCRL2 tem um comando, "sum", e tal como foi feito para o "Flashligth" pelo professor, permite fazermos um "+" para a\c{c}\~oes infinitas.\newline
+Depois foi s\'o testarmos qual era o que tinha menor velocidade, ou o "s" gerado pelo "sum", ou o argumento do processo, para modelarmos apenas uma das possibilidades que sabemos que s\~ao iguais. \newline
+J\'a no caso de a posi\c{c}\~ao ser "finish", n\~ao temos escolhas nem testes a fazer, basta o aventureiro chamado pelo processo regressar ao "start" para acompanhar outro aventureiro, uma vez que s\'o poder\~ao atravessar com a lanterna.  
+ 
+ 
+ \begin{lstlisting}
+proc Adventurer (pos:Position , speed:Int) =
+	(pos == start ) ->
+	sum s: Int .(s > speed)->
+		foward_adventure(speed,s ).Adventure(finish,speed)
+		<>
+		foward_adventure(s,speed).Adventure(finish,speed)
+	<>
+	back_adventure(speed).Adventure(start,speed);
+\end{lstlisting}
+
+
+\section{Exercicio 2}
+\subsection{Inicializar os 4 aventureiros e a lanterna}
+Os aventureiros come\c{c}am todos do lado "start" e com a sua respetiva velocidade.  Para os colocar em paralelo usamos "$|$ $|$".
+
+\begin{lstlisting}
+init
+  Adventure(start,1) || Adventure(start,2) || Adventure(start,5) ||
+  Adventure(start,10) || Flashligth(start)
+  Flashligth(start) ;
+\end{lstlisting}
+\subsection{Comunica\c{c}\~ao de processos}
+Para que os pro\c{c}essos comuniquem usamos o comando "comm".
+\begin{lstlisting}
+init
+ comm (
+ {
+  forward_adventurer | foward_adventurer | forward_flashligth -> forward,
+  back_adventurer | back_flashligth -> back
+  },
+
+  Adventure(start,1) || Adventure(start,2) || Adventure(start,5) ||
+  Adventure(start,10) || Flashligth(start)
+);
+\end{lstlisting}
+
+\subsection{Garantir que apenas as a\c{c}\~oes "forward" e "back" possam ocorrer. }
+Para que apenas os processos "forward" e "back" possam ocorrer usa-se o comando "allow"
+\begin{lstlisting}
+init
+allow({ forward, back },
+ comm (
+ {
+  forward_adventurer | foward_adventurer | forward_flashligth ->forward,
+  back_adventurer | back_flashligth -> back
+  },
+  Adventure(start,1) || Adventure(start,2) || Adventure(start,5) ||
+  Adventure(start,10) || Flashligth(start)
+  )
+);
+\end{lstlisting}
+
+\section{Exercicio 3}
+\subsection{mcrl22lps }
+\subsection{lpsxsim }
+
+\section{Exercicio 4}
+\subsection{lps2lts }
+\subsection{ltsgraph }
+\subsection{ltsview }
+
+\section{Exercicio 5}
+
+
+
+\section{Conclus\~ao}\label{concl}
+
+\addcontentsline{toc}{chapter}{Bibliografia}
+\chapter*{Bibliografia}
+\footnotesize{
+
+\noindent AGUIRRE, L. A. Introdu\c{c}\~ao ...  Identifica\c{c}\~ao de Sistemas, T\'ecnicas Lineares e N\~ao lineares Aplicadas a Sistemas Reais. Belo Horizonte, Brasil, EDUFMG. 2004.\\
+
+}
+\appendix
+\section{C\'odigo do Exerc\'icio}
+
+
+\begin{lstlisting}
+   act  forward_adventurer,
+        forward_flashlight,
+        forward_referee,
+        forward: Int # Int;
+
+        back_adventurer,
+        back_flashlight,
+        back_referee,
+        back: Int;
+
+        report: Int;
+\end{lstlisting}
+
+\printindex
+\end{document}

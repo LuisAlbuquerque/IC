@@ -1,0 +1,168 @@
+% Grupo 7: Luís Azevedo - 66704, Luís Martins - 66093, Rúben Sousa - 65447
+
+sort
+    % Definição dos táxis existentes. Neste momento tem 2, 'a' e 'b'.
+    % O tipo Lista é composto por uma lista de Viaturas.
+    
+    Viatura = struct a|b; 
+    Lista = List(Viatura);
+
+act
+    % Definição das ações possíveis. Todas elas são do tipo Viatura.
+    % Ações relativas a, respetivamente:
+    % Início e fim de turno;
+    % Início e fim de corridas;
+    % Corridas agendadas;
+    % Sinalização da localização atual de viatura;
+    % Deteção de possível cliente (para viaturas que estejam ocupadas).
+    v_sai,cr_sai,v_reg,cr_reg,sai,reg, 
+    rec,fcr, v_snr,cr_snr,cr_snf,snr,snf, cl_rec,cl_via_rec, 
+    v_alo,cr_alo,alo, v_anu,cr_anu,anu, 
+    v_tic,cr_tic,tic,
+    v_det,cr_det,cl_det,det : Viatura;
+
+map 
+    % Definição das funções utilizadas.
+    % Função add é utilizada para adicionar uma Viatura a uma Lista.
+    % Função remove é utilizada para remover uma Viatura de uma Lista.
+
+    add: Lista # Viatura -> Lista; 
+    remove: Lista # Viatura -> Lista;
+
+var 
+    % Variáveis que são utilizadas em eqn.
+
+    lst: Lista;
+    v: Viatura;
+
+eqn
+    % Codificação das funções remove e add.
+    % Função remove: Definida recursivamente.
+    % Caso lst esteja vazia devolve uma lista vazia;
+    % Se o elemento a remover não for a cabeça da lista, esta é adicionada à lista final e é aplicada a função remove à restante lista.
+    % Se o elemento a remover for a cabeça da lista é devolvida a cauda da lista.
+
+    (lst == []) -> remove(lst,v) = [];
+    (v != head(lst)) -> remove(lst,v) = [head(lst)] ++ remove(tail(lst),v);
+    (v == head(lst)) -> remove(lst,v) = tail(lst);
+
+
+    % Função add: É adicionado ao final da lista a Viatura v à lista lst.
+
+    add(lst,v) = lst <| v;
+
+
+% Definição dos processos.
+proc
+
+  % Processo Viatura recebe duas listas:
+  % emServ: Contém as Viaturas que já iniciaram o seu turno.
+  % ocupado: Contém as Viaturas atualmente em corrida.
+
+  Viaturas (emServ: Lista,ocupado:Lista) =
+
+    % Caso as viaturas não se encontrem em serviço, ou seja, caso não estejam na lista "emServ", é possível executar a ação "sai" e é adicionada a Viatura à lista "emServ".
+
+    sum v:Viatura.((v in emServ)==false) -> (v_sai(v).Viaturas(add(emServ,v),ocupado))
+    <>
+
+    % Para viaturas que já se encontrem em serviço é possível informar a central da posição atual da viatura através da ação "v_tic", e para além disso há dois grupos de ações:
+    % Para viaturas que estão atualmente em corrida, e para as que não estão.
+
+    (
+      (
+
+      % Caso a viatura não se encontre em corrida, ou seja não está na lista "ocupado", é possível:
+      % 1. Apanhar um passageiro, ação "cl_via_rec", e de seguida informar a central do mesmo, ação "v_snr", e é adicionada a viatura à lista "ocupado";
+      % 2. Ir buscar um passageiro que tinha agendado uma corrida, ação "v_alo", seguido de 2 opções, informar a central que apanhou o passageiro ,ação "v_snr", ou que o passageiro não se encontra no local, "v_anu". Caso apanhe o passageiro a viatura é adicionada à lista "ocupado";
+      % 3. Terminar o turno da viatura, ação "v_reg", e removê-la da lista "emserv".
+
+        ((v in ocupado)==false) -> 
+        (
+          cl_via_rec(v).v_snr(v).Viaturas(emServ,add(ocupado,v)) +
+          v_alo(v).( v_snr(v).Viaturas(emServ,add(ocupado,v)) + v_anu(v) ) +
+          v_reg(v).Viaturas(remove(emServ,v),ocupado)
+        )
+        <>
+
+      % Caso a viatura se encontre em corrida, ou seja se encontre na lista "ocupado", é possível:
+      % 1. Terminar a corrida atual, ação "fcr", e remover a viatura da lista "ocupado";
+      % 2. Informar a central que foi detetado um possível cliente através da ação "v_det".
+
+        ( 
+          fcr(v).Viaturas(emServ,remove(ocupado,v)) + 
+          v_det(v)
+        )
+      ) + 
+      v_tic(v)
+    ).Viaturas(emServ,ocupado);
+
+  
+  % Processo Controlador recebe duas listas:
+  % emServ: Contém as Viaturas que já iniciaram o seu turno.
+  % ocupado: Contém as Viaturas atualmente em corrida.
+  
+  Controlador(emServ: Lista,ocupado:Lista) =
+
+  % Caso as viaturas não se encontrem em serviço, ou seja, caso não estejam na lista "emServ", é possível receber a ação "cr_sai" e é adicionada a viatura à lista "emServ".
+
+    sum v:Viatura.((v in emServ)==false) -> cr_sai(v).Controlador(add(emServ,v),ocupado)
+    <>
+
+    % Para viaturas que já se encontrem em serviço é possível receber a posição atual da viatura através da ação "cr_tic", e para além disso há dois grupos de ações:
+    % Para as viaturas que estão atualmente em corrida, e para as que não estão.
+
+    (
+      ( 
+
+      % Para as viaturas que não se encontrem em corrida, ou seja não estão na lista "ocupado", é possível:
+      % 1. Receber a informação que a viatura iniciou uma corrida, ação "cr_snr", e é adicionada a viatura à lista "ocupado";
+      % 2. Receber a informação que uma viatura foi buscar um passageiro que tinha uma corrida agendada, ação "cr_alo", seguido de 2 opções, ou recebe a informação que apanhou o passageiro ,ação "cr_snr", ou que o passageiro já não se encontrava no local, "cr_anu". Caso apanhe o passageiro a viatura é adicionada à lista "ocupado";
+      % 3. Receber a informação que o turno da viatura terminou, ação "cr_reg", e removê-la da lista "emserv".
+
+        ((v in ocupado)==false) -> 
+        (  
+          cr_snr(v).Controlador(emServ,add(ocupado,v)) +
+          cr_alo(v).( cr_snr(v).Controlador(emServ,add(ocupado,v)) + cr_anu(v) ) + 
+          cr_reg(v).Controlador(remove(emServ,v),ocupado)
+        )
+        <>
+
+      % Caso a viatura se encontre em corrida, ou seja se encontre na lista "ocupado", é possível:
+      % 1. Receber informação de fim de corrida, ação "cr_snf", e remover a viatura da lista "ocupado";
+      % 2. Receber a informação que foi detetado um possível cliente através da ação "v_det".
+
+        ( 
+          cr_snf(v).Controlador(emServ,remove(ocupado,v)) +
+          cr_det(v)
+        )
+      ) +
+      cr_tic(v)
+    ).Controlador(emServ,ocupado);
+  
+  
+  % Processo Cliente
+  % Caso a viatura não esteja ocupada, é possível mandar parar uma viatura, ação "cr_rec", caso esteja, é enviada a ação "cl_det".
+
+  Cliente = sum v:Viatura.( cl_rec(v) + cl_det(v) ).Cliente;
+
+
+init
+     allow(
+     % É possível ver as ações "sai","reg","alo","snr","snf","anu","tic","det" e "rec".
+       {sai,reg,alo,snr,snf,anu,tic,det,rec},
+       comm(
+            { v_sai|cr_sai -> sai,            % Início de turno;
+              v_reg|cr_reg -> reg,            % Fim de turno;
+              v_snr|cr_snr -> snr,            % Início de corrida;
+              fcr|cr_snf -> snf,              % Fim de corrida;
+              v_tic|cr_tic -> tic,            % Comunicação de localização;
+              v_det|cr_det|cl_det -> det,     % Caso o táxi esteja ocupado e um Cliente o mande parar, a central é informada de potencial cliente;
+              cl_rec|cl_via_rec -> rec,       % Cliente manda parar táxi;
+              v_alo|cr_alo -> alo,            % Tratamento de corrida agendada;
+              v_anu|cr_anu -> anu             % Anulação de corrida agendada.
+            },
+            % Paralelismo entre os processos Viaturas, Controlador e Cliente.
+            % Os processos Viatura e Controlador são ambos inicializados com duas listas vazias, lista "emServ" e lista "ocupado".
+            Viaturas([],[]) || Controlador([],[]) || Cliente
+     ) ) ;

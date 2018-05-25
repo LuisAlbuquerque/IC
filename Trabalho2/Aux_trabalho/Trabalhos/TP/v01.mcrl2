@@ -1,0 +1,23 @@
+% Declaração das ações (6 no total).
+act 	
+  ins10, optA, acc10, putA, coin, ready ; 
+
+% Definição dos dois processos (User e Mach).
+proc 	 
+  User = ins10 . optA . User ;  
+  % Este processo é definido recursivamente pela acção "ins10" seguida da acção "optA" seguida pelo processo "User" novamente.
+  
+  Mach = acc10 . putA . Mach ;	
+  % Este processoo é definido recursivamente pela acção "acc10" seguida da acção "putA" seguida pelo processo "Mach" novamente.
+
+% Inicialização do sistema.
+init 	
+  allow( 
+  % São permitidas as acções "coin" e "ready".
+    { coin, ready },
+    comm(
+      { ins10|acc10 -> coin, optA|putA -> ready },	
+      % A sincronização de uma acção "ins10" e uma acção "acc10" produz a acção "coin". Enquanto que a sincronização de uma acção "optA" e uma acção "putA" produz a acção "ready".
+      
+      User || Mach		% O processo User e o processo Mach são processos paralelos (operador "||"). 
+  ) ) ;

@@ -1,0 +1,65 @@
+act
+ 	src, gtc, stp, cpt, atc, rec, cmp, bck, cko, log, reg, sdl, hdl, vis, mtc, ppl, search, goToStartPage, chooseProduct, goToRecommendations, addToCart, goToCompare, goToCart, goBack, checkout, login, register, store, mail, visa, mastercard, paypal, full ;
+	
+proc
+	
+	CSP(p:Int) = src . CPL(p) + gtc . CSC(p) ;
+	CPL(p:Int) = stp . CSP(p) + cpt . CPP(p) + gtc . CSC(p) ;
+	CPP(p:Int) = stp . CSP(p) + ((p<5) -> (atc . CPP(p+1)) <> (full)) + rec . CPL(p) + cmp . CCP(p) + gtc . CSC(p) ;
+	CCP(p:Int) = bck . CPP(p) + ((p<5) -> (atc . CCP(p+1)) <> (full)) + gtc . CSC(p) ;
+	CSC(p:Int) = (p>0) -> (stp . CSP(p) + cko . (log + reg) . (sdl + hdl) . (vis + mtc + ppl) . stp . CSP(0)) <> (stp . CSP(p)) ;
+
+	SSP(p:Int) = src . SPL(p) + gtc . SSC(p) ;
+	SPL(p:Int) = stp . SSP(p) + cpt . SPP(p) + gtc . SSC(p) ;
+	SPP(p:Int) = stp . SSP(p) + ((p<5) -> (atc . SPP(p+1)) <> (full)) + rec . SPL(p) + cmp . SCP(p) + gtc . SSC(p) ;
+	SCP(p:Int) = bck . SPP(p) + ((p<5) -> (atc . SCP(p+1)) <> (full)) + gtc . SSC(p) ;
+	SSC(p:Int) = (p>0) -> (stp . SSP(p) + cko . (log + reg) . (sdl + hdl) . (vis + mtc + ppl) . stp . SSP(0)) <> (stp . SSP(p)) ;
+	
+init
+  allow(
+    {search, goToStartPage, chooseProduct, goToRecommendations, addToCart, goToCompare, goToCart, goBack, checkout, login, register, store, mail, visa, mastercard, paypal},
+    comm( { 
+      src|src -> search, 
+      gtc|gtc -> goToCart,
+      stp|stp -> goToStartPage,
+      cpt|cpt -> chooseProduct,
+      atc|atc -> addToCart,
+      rec|rec -> goToRecommendations,
+      cmp|cmp -> goToCompare,
+      bck|bck -> goBack,
+      cko|cko -> checkout,
+      log|log -> login,
+      reg|reg -> register,
+      sdl|sdl -> store,
+      hdl|hdl -> mail,
+      vis|vis -> visa,
+      mtc|mtc -> mastercard,
+      ppl|ppl -> paypal
+},
+      CSP(0) || SSP(0)
+  ) ) ;
+
+
+
+% SP Start Page
+% PL Product List
+% PP Product Page
+% CP Compare Page
+% SC Shopping Cart
+
+% src Search
+% stp Start Page
+% cpt Choose Product
+% atc Add To Cart
+% rec Recommendations
+% cmp Compare
+% gtc Go To Cart
+% bck Go Back
+% cko Checkout
+% log Login
+% reg Register
+% sdl Store Delivery
+% hdl Home Delivery
+% vis Visa
+% mtc MasterCard
+% ppl Paypal

@@ -1,0 +1,43 @@
+sort
+    Viatura = struct a|b;
+
+act
+    sai,cr_sai,reg,cr_reg,horario, rec, fcr, alo,cr_alo,agendado, snr,cr_snr,snf,cr_snf,comunica, anu,cr_anu,cancel,
+    tic,cr_tic,local, det,cr_det,pextra, cl_rec,cl_via_rec,wave: Viatura;
+
+proc
+    Viaturas =
+        sum V:Viatura.sai(V).S.Viaturas;
+    S = sum V:Viatura.(
+        ( cl_via_rec(V).rec(V).snr(V).( fcr(V) + cl_via_rec(V).det(V).fcr(V) ).snf(V) ) +
+        ( alo(V).( snr(V).( fcr(V) + cl_via_rec(V).det(V).fcr(V) ).snf(V) + anu(V) ) ) +
+        tic(V)
+    ).(reg(V) + S);
+
+
+    Controlador =
+         sum V:Viatura.cr_sai(V).C.Controlador;
+
+    C = sum V:Viatura.(
+        ( cr_snr(V).( cr_det(V).cr_snf(V) + cr_snf(V) ) ) + 
+        ( cr_alo(V).( cr_snr(V).( cr_det(V).cr_snf(V) + cr_snf(V) ) + cr_anu(V) ) ) + 
+        cr_tic(V)
+    ).(cr_reg(V) + C);
+
+    Cliente = sum V:Viatura.cl_rec(V).Cliente; 
+init
+     allow(
+       {horario,rec,fcr,agendado,comunica,cancel,local,pextra,wave},
+       comm(
+            { sai|cr_sai -> horario,          % Início de turno
+              reg|cr_reg -> horario,          % Fim de turno
+              snr|cr_snr -> comunica,         % Início de corrida
+              snf|cr_snf -> comunica,         % Fim de corrida
+              tic|cr_tic -> local,            % Comunicação de localização
+              det|cr_det -> pextra,           % Táxi deteta potencial cliente
+              cl_rec|cl_via_rec -> wave,      % Cliente manda parar táxi
+              alo|cr_alo -> agendado,         % Central agenda corrida de cliente
+              anu|cr_anu -> cancel            % Anulação de serviço
+            },
+            Viaturas || Controlador || Cliente 
+     ) ) ;

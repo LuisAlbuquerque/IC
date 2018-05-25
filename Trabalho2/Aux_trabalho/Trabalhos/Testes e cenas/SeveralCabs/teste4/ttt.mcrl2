@@ -1,0 +1,63 @@
+sort
+    Viatura = struct a|b;
+    Lista = List(Viatura);
+
+act
+    sai,cr_sai,reg,cr_reg,ini,fim, rec, fcr, alo,cr_alo,agendado, snr,cr_snr,snf,cr_snf,comunica, anu,cr_anu,cancel, tic,cr_tic,local, det,cr_det,pextra: Viatura;
+
+map 
+    add: Lista # Viatura -> Lista; 
+    remove: Lista # Viatura -> Lista;
+
+var lst: Lista;
+    v: Viatura;
+
+eqn (lst == []) -> remove(lst,v) = [];
+    (v == head(lst)) -> remove(lst,v) = tail(lst);
+    (v != head(lst)) -> remove(lst,v) = [v] ++ remove(tail(lst),v);
+
+    add(lst,v) = v |> lst;
+
+
+proc
+    Viaturas (lst: Lista) =
+        sum v:Viatura.((v in lst)==false) -> sai(v).S(add(lst,v));
+
+    S(lst: Lista) = 
+        sum v:Viatura.(v in lst) -> (
+            ( rec(v).snr(v).( fcr(v) + det(v).fcr(v) ).snf(v) ) +
+            ( alo(v).( snr(v).( fcr(v) + det(v).fcr(v) ).snf(v) + anu(v) ) ) +
+            tic(v) 
+        ).( reg(v).Viaturas(remove(lst,v)) + S(lst) );
+
+
+    Controlador(lst: Lista) =
+        sum v:Viatura.((v in lst)==false) -> cr_sai(v).C(add(lst,v));
+    
+    C(lst: Lista) = 
+        sum v:Viatura.(v in lst) -> (
+            ( cr_snr(v).( cr_det(v).cr_snf(v) + cr_snf(v) ) ) +
+            ( cr_alo(v).( cr_snr(v).( cr_det(v).cr_snf(v) + cr_snf(v) ) + cr_anu(v) ) ) + 
+            cr_tic(v)
+        ).(cr_reg(v).Controlador(remove(lst,v)) + C(lst));
+
+
+%    Cliente = sum v:Viatura.cl_rec(v).Cliente;
+
+
+init
+     allow(
+       {ini,fim,rec,fcr,agendado,comunica,cancel,local,pextra},
+       comm(
+            { sai|cr_sai -> ini,          % Início de turno
+              reg|cr_reg -> fim,          % Fim de turno
+              snr|cr_snr -> comunica,         % Início de corrida
+              snf|cr_snf -> comunica,         % Fim de corrida
+              tic|cr_tic -> local,            % Comunicação de localização
+              det|cr_det -> pextra,           % Táxi deteta potencial cliente
+%              cl_rec|cl_via_rec -> wave,      % Cliente manda parar táxi
+              alo|cr_alo -> agendado,         % Central agenda corrida de cliente
+              anu|cr_anu -> cancel            % Anulação de serviço
+            },
+            Viaturas([]) || Controlador([]) % || Cliente
+     ) ) ;

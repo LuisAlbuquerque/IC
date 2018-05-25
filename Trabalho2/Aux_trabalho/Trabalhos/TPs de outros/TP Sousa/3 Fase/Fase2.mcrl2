@@ -1,0 +1,182 @@
+sort Coin = struct zero|five | ten | twenty | fifty;	%Moedas aceites
+     Product = struct Apple | Chocolate;			%Produtos aceites
+
+act						%acção relacionadas com as moedas inseridas , ins e chg do lado do utilizador
+  ins, acc, coin, ret, chg, out: Coin;			% acc e ret do lado da maquina
+  opt, put, ready: Product;				%acções relacionadas com os produtos
+  prod;
+
+proc
+  User(saldo:Int) = 
+	%Este processo é responsavel pelas alternativas apresentadas ao utilizador com base no saldo
+	%Se o saldo for igual a zero só temos a opção de inserir moedas
+	%Se o saldo estiver entre cinco e 55 podemos retirar produtos e receber troco, ou inserir mais moedas com saldo maximo de 60 cent
+	%Se o saldo for de 60cent a maquina só aceita a remoção de produtos ou a remoção dos 60cent
+	% Este processo apresenta-nos a alternativa a cada momento consoante o saldo do User, apenas são apresentadas opções em cada estado que
+	% o utilizador está em condições de escolher, por exemplo sem inserir moedas não é possivel retirar troco, logo essa opção não é apresentada
+	% no estado em que o saldo é igual a 0.
+	(saldo == 0) -> ( 
+		Insert(five, saldo) + Insert(ten, saldo) + Insert(twenty,saldo) + Insert(fifty, saldo) )
+	<>
+	(saldo == 5) -> ( 
+		Insert(five, saldo) + Insert(ten, saldo) + Insert(twenty,saldo) + Insert(fifty, saldo) + ChgMoney(5) )
+
+	<>
+	(saldo >= 10 && saldo < 20) -> (
+		Insert(five, saldo) + Insert(ten, saldo) + Insert(twenty,saldo) + Insert(fifty, saldo) + ChgMoney(saldo) + GiveP(Apple,saldo) )	
+	<>
+	(saldo >= 20 && saldo <= 40) -> (
+		Insert(five, saldo) + Insert(ten, saldo) + Insert(twenty,saldo) + ChgMoney(saldo) + GiveP(Apple,saldo) + GiveP(Chocolate,saldo) )
+	<>
+	(saldo > 40 && saldo < 50) -> (
+		Insert(five, saldo) + Insert(ten, saldo) + ChgMoney(saldo) + GiveP(Apple,saldo) + GiveP(Chocolate,saldo) )
+	<>
+	(saldo == 50) -> (
+		 Insert(five, saldo) + Insert(ten, saldo) + ChgMoney(saldo) + GiveP(Apple,saldo) + GiveP(Chocolate, saldo) )
+	<>
+	(saldo == 55) -> (	
+		Insert(five, saldo) + ChgMoney(saldo) + GiveP(Apple,saldo) + GiveP(Chocolate, saldo) )
+	<>
+	(saldo == 60) -> (	
+		ChgMoney(saldo) + GiveP(Apple,saldo) + GiveP(Chocolate, saldo) );	
+
+	
+
+
+  Insert(n:Coin, saldo:Int) =
+	%Este processo é responsavel pela inserção de moedas. Lê a moeda correspondente e atualiza o saldo , retornando para o processo "User"
+	( n == five) -> (
+		ins(five).User(saldo+5) )
+
+	<>
+	( n == ten) -> (
+		ins(ten).User(saldo+10) ) 
+
+	<>
+	( n == twenty) -> (
+		ins(twenty).User(saldo+20) )
+
+	<>
+	( n == fifty) -> (
+		ins(fifty).User(saldo+50) );
+
+  ChgMoney(saldo:Int) =
+	%Este processo é responsavel pela gestão inteligente de trocos.
+	% Quando é chamada esta função, ela avalia o saldo "por cima" ou seja, é suposto entregar ao User o troco com as moedas mais
+	%altas possiveis, assim começa por avaliar se o saldo é maior que 50, se for devolve uma moeda de 50 atualiza o saldo e chama-se
+	%recursivamente, se não for, avalia se o saldo é maior que vinte, repetindo este processo até chegar a 0. Quando é zero nós adicionamos
+	% uma moeda zero que neste caso funciona apenas como um skip, como um processo tem de estar associado a uma ação, não podiamos simplesmente
+	% chamar o processo User quando o troco fosse zero, pois isso dá erro, assim a solução que encontramos foi adicionar esta moeda zero
+	% que não faz nada associada ao processo User.
+	(saldo == 0)->(
+		chg(zero).User(0))
+	<>
+	(saldo >= 50) -> (
+		chg(fifty).(ChgMoney(saldo-50)))
+	<>
+	(saldo >=20) ->(
+		chg(twenty).(ChgMoney(saldo-20)))
+	<>
+	(saldo >= 10) ->(
+		chg(ten).(ChgMoney(saldo-10)))
+	<>
+	(saldo >= 5) ->(
+		chg(five).(ChgMoney(saldo-5)));
+
+  GiveP(n:Product, saldo:Int) =
+	%Este processo avalia se o saldo é suficiente para o produto desejado, se fôr entrega o produto e atualiza o saldo, não havia necessidade
+	% de verificar se o saldo é superior pois como usamos o processo User para gerir as possibilidades de escolha que existem consoante o saldo,
+	% um determinado produto, não é selecionável se o saldo não fôr suficiente, no entanto por uma questão de coerência consideramos ser uma boa
+	% prática conferir se o saldo é ou não suficiente para o produto.
+	( n == Apple && saldo >= 10) -> (
+		opt(Apple).User(saldo - 10) )
+
+	+
+	( n == Chocolate && saldo >= 20) -> (
+		opt(Chocolate).User(saldo -20) );
+
+
+	
+
+
+  Mach(saldo:Int) =
+	%Este processo é de todo semelhante ao processo "User" mas do lado da maquina.
+	(saldo == 0) -> (
+		Accept(five, saldo) + Accept(ten, saldo) + Accept(twenty,saldo) + Accept(fifty, saldo) )
+
+	<>
+	(saldo == 5) -> (
+		Accept(five, saldo) + Accept(ten, saldo) + Accept(twenty,saldo) + Accept(fifty, saldo) + RetMoney(5) )
+	<>
+	(saldo >= 10 && saldo < 20) -> (
+		Accept(five, saldo) + Accept(ten, saldo) + Accept(twenty,saldo) + Accept(fifty, saldo) + RetMoney(saldo) + PutP(Apple,saldo) )	
+	<>
+	(saldo >= 20 && saldo <= 40) -> (
+		Accept(five, saldo) + Accept(ten, saldo) + Accept(twenty,saldo) + RetMoney(saldo) + PutP(Apple,saldo) + PutP(Chocolate,saldo) )
+	<>
+	(saldo > 40 && saldo < 50) -> (
+		Accept(five, saldo) + Accept(ten, saldo) + RetMoney(saldo) + PutP(Apple,saldo) + PutP(Chocolate,saldo) )
+	<>
+	(saldo == 50) -> (
+		 Accept(five, saldo) + Accept(ten, saldo) + RetMoney(saldo) + PutP(Apple,saldo) + PutP(Chocolate, saldo) )
+	<>
+	(saldo == 55) -> (	
+		Accept(five, saldo) + RetMoney(saldo) + PutP(Apple,saldo) + PutP(Chocolate, saldo) )
+	<>
+	(saldo == 60) -> (	
+		RetMoney(saldo) + PutP(Apple,saldo) + PutP(Chocolate, saldo) );
+	
+
+
+  Accept(n:Coin, saldo:Int) =
+	%Este processo é semelhante ao processo "Insert"
+	( n == five) -> (
+		acc(five).Mach(saldo+5) )
+
+	<>
+	( n == ten) -> (
+		acc(ten).Mach(saldo+10) )
+
+	<>
+	( n == twenty) -> (
+		acc(twenty).Mach(saldo+20) )
+
+	<>
+	( n == fifty) -> (
+		acc(fifty).Mach(saldo+50) );
+
+  RetMoney(saldo:Int) =
+	%Este processo é semelhante ao processo "ChgMoney"
+	(saldo == 0)->(
+		ret(zero).Mach(0))
+	<>
+	(saldo >= 50) -> (
+		ret(fifty).(RetMoney(saldo-50)))
+	<>
+	(saldo >= 20) ->(
+		ret(twenty).(RetMoney(saldo-20)))
+	<>
+	(saldo >= 10) ->(
+		ret(ten).(RetMoney(saldo-10)))
+	<>
+	(saldo >= 5) ->(
+		ret(five).(RetMoney(saldo-5)));
+
+  PutP(n:Product, saldo:Int) =
+	%Este processo é semelhante ao processo "GiveP"
+	( n == Apple && saldo >= 10) -> (
+		put(Apple).Mach(saldo - 10) )
+	+
+	( n == Chocolate && saldo >= 20) -> (
+		put(Chocolate).Mach(saldo - 20) );
+
+
+init %inicialização da Maquina e do utilizador
+  allow(
+    { coin, ready, out, prod },	%ações possiveis no estado inicial
+    comm(
+      { ins|acc -> coin,		%Sicronização  de uma acção "ins" e "acc" que gera uma acção "coin"
+        chg|ret -> out,		%Sicronização  de uma acção "chg" e "ret" que gera uma acção "out"
+        opt|put -> ready },		%Sicronização  de uma acção "opt" e "put" que gera uma acção "ready"
+      User(0) || Mach(0)		%Inicialização dos processos "User" e "Mach" em paralelo com saldo inicializado a zero como argumento.
+  ) ) ;

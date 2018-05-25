@@ -1,0 +1,52 @@
+% Grupo 7: Luís Azevedo - 66704, Luís Martins - 66093, Rúben Sousa - 65447
+
+act
+  % Declaração das acções (19 no total).
+  ins10, ins20, acc10, acc20, coin10, coin20, ret10, ret20 ;
+  optA, optC, chg10, chg20, putA, putC, prod, 
+  readyA, readyC, out10, out20 ;
+
+% Definição dos dois processos (User e Mach).
+proc		
+  User = 
+    ins10.( optA + ins10.( optC + chg20 ) + chg10 ).User +
+    ins20.( optA.chg10 + optC + chg20 ).User ;
+  % Este processo tem duas variações:
+  % 1. Pode ser definido pela acção "ins10" seguida de 3 opções (ou a acção "optA", ou a acção chg10, ou a acção "ins10" sendo esta última seguida pela acção "optC" ou "chg20"), seguida novamente pelo processo "User".  
+  %2. Pode ser definido pela acção "ins20" seguida de 3 opções (ou a acção "optC", ou a acção chg20, ou a acção "optA" sendo esta última seguida pela acção "chg10"), seguida novamente pelo processo "User".
+
+  Mach = 
+    acc10.( putA.prod + acc10.( putC.prod + ret20 ) + ret10 ).Mach +
+    acc20.( putA.prod.ret10 + putC.prod + ret20 ).Mach ;
+  % Este processo tem duas variações:
+  % 1. Pode ser definido pela acção "acc10" seguida de 3 opções (ou a acção "putA" seguida da acção "prod", ou a acção "ret10", ou a acção "acc10" sendo esta última seguida pela acção "putC" seguida da acção "prod" ou seguida pela acção "ret20"), seguida novamente pelo processo "Mach".
+  % 2. Pode ser definido pela acção "acc20" seguida de 3 opções (ou a acção "putC" seguida da acção "prod", ou a acção "ret20", ou a acção "putA" sendo esta última seguida pela acção "prod" seguida da acção "ret10"), seguida novamente pelo processo "Mach".
+
+% Inicialização do sistema:
+init
+  allow(	 
+  % São permitidas as acções "coin10", "coin20", "readyA", "readyC", "out10", "out20" e "prod".
+    { coin10, coin20, readyA, readyC, out10, out20, prod },
+    comm(
+      { ins10|acc10 -> coin10, ins20|acc20 -> coin20,
+        chg10|ret10 -> out10, chg20|ret20 -> out20,
+        optA|putA -> readyA, optC|putC -> readyC },
+        % 1. Sincronização de uma acção "ins10" e uma acção "acc10" produz a acção "coin10".
+        % 2. Sincronização de uma acção "ins20" e uma acção "acc20" produz a acção "coin20".
+        % 3. Sincronização de uma acção "chg10" e uma acção "ret10" produz a acção "out10".
+        % 4. Sincronização de uma acção "chg20" e uma acção "ret20" produz a acção "out20". 
+        % 5. Sincronização de uma acção "optA" e uma acção "putA" produz a acção "readyA"
+        % 6. Sincronização de uma acção "optC" e uma acção "putC" produz a acção "readyC".
+      User || Mach		
+      % O processo User e o processo Mach são processos paralelos (operador "||").
+  ) ) ;
+
+
+
+  % Comparação entre v01 e v02:
+  %	- A v02 é uma extensão da v01.
+  %	- Na v02 existem 2 tipos de produtos (enquanto que na v01 apenas existia 1). 
+  %	- Com a v02 podemos inserir uma moeda de 20 ou 1 ou 2 moedas de 10 (em vez de inserir apenas 1 de 10).
+  %	- A v02 devolve troco caso seja inserido um total de 20 e o produto selecionado apenas custe 10.
+  %	- Em ambas é possivel retirar o dinheiro inserido sem ser necessário escolher um produto.
+  

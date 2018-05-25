@@ -1,0 +1,1 @@
+[ins(twenty)] [opt(Chocolate)] <opt(Apple)> false % inserindo uma moeda de vinte e escolhendo um chocolate, não posso tirar uma maçã depois.

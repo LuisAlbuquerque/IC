@@ -1,0 +1,44 @@
+sort
+    Viatura = Pos;
+
+act
+    sai,cr_sai,reg,cr_reg,horario, rec, fcr, alo,cr_alo,agendado, snr,cr_snr,snf,cr_snf,contactaCentral, anu,cr_anu,cancel,
+    tic,cr_tic,local, det,cr_det,pextra: Viatura; % ações da Viatura.
+
+proc
+    Viaturas =
+       sum n:Pos. (n<4) -> sai(n).S.Viaturas;  % Start(num viatura)
+
+    S =
+    sum n:Pos. (n<4) -> (
+        ( rec(n).snr(n).( fcr(n) + det(n).fcr(n) ).snf(n) ) +
+        ( alo(n).( snr(n).( fcr(n) + det(n).fcr(n) ).snf(n) + anu(n) ) ) +
+        tic(n)
+    ).(reg(n) + S);
+
+    Controlador =
+         sum n:Pos. (n<4) -> cr_sai(n).C.Controlador;
+
+    C =
+    sum n:Pos. (n<4) -> (
+        ( cr_snr(n).( cr_det(n).cr_snf(n) + cr_snf(n) ) ) +
+        ( cr_alo(n).( cr_snr(n).( cr_det(n).cr_snf(n) + cr_snf(n) ) + cr_anu(n) ) ) +
+        cr_tic(n)
+    ).(cr_reg(n) + C);
+
+
+init
+     allow(
+       {horario,rec,fcr,agendado,contactaCentral,cancel,local,pextra},
+       comm(
+            { sai|cr_sai -> horario,
+              reg|cr_reg -> horario,
+              snr|cr_snr -> contactaCentral,
+              snf|cr_snf -> contactaCentral,
+              tic|cr_tic -> local,
+              det|cr_det -> pextra,
+              alo|cr_alo -> agendado,
+              anu|cr_anu -> cancel
+            },
+            Viaturas || Controlador
+     ) ) ;

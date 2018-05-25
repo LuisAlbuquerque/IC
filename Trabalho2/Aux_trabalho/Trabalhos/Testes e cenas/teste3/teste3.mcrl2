@@ -1,0 +1,45 @@
+sort
+    Viatura = struct one;
+
+act
+    sai,cr_sai,reg,cr_reg,horario, rec, fcr, alo,cr_alo,agendado, snr,cr_snr,snf,cr_snf,contactaCentral, anu,cr_anu,cancel,
+    tic,cr_tic,local, det,cr_det,pextra: Viatura; % ações da Viatura.
+
+
+proc
+    Viaturas =
+        sai(one).S.Viaturas;  % Start(num viatura)
+
+    S =
+    (
+        ( rec(one).snr(one).( fcr(one) + det(one).fcr(one) ).snf(one) ) +
+        ( alo(one).( snr(one).( fcr(one) + det(one).fcr(one) ).snf(one) + anu(one) ) ) +
+        tic(one)
+    ).(reg(one) + S);
+
+    Controlador =
+        cr_sai(one).C.Controlador;
+
+    C =
+    (
+        ( cr_snr(one).( cr_det(one).cr_snf(one) + cr_snf(one) ) ) +
+        ( cr_alo(one).( cr_snr(one).( cr_det(one).cr_snf(one) + cr_snf(one) ) + cr_anu(one) ) ) +
+        cr_tic(one)
+    ).(cr_reg(one) + C);
+
+
+init
+     allow(
+       {horario,rec,fcr,agendado,contactaCentral,cancel,local,pextra},
+       comm(
+            { sai|cr_sai -> horario,
+              reg|cr_reg -> horario,
+              snr|cr_snr -> contactaCentral,
+              snf|cr_snf -> contactaCentral,
+              tic|cr_tic -> local,
+              det|cr_det -> pextra,
+              alo|cr_alo -> agendado,
+              anu|cr_anu -> cancel
+            },
+            Viaturas || Controlador
+     ) ) ;

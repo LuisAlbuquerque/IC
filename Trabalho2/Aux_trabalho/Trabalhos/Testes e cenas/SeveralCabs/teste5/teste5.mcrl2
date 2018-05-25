@@ -1,0 +1,64 @@
+sort
+    Viatura = struct a;
+    Lista = List(Viatura);
+
+act
+    v_sai,cr_sai,v_reg,cr_reg,sai,reg, rec, fcr, v_alo,cr_alo,alo, v_snr,cr_snr,v_snf,cr_snf,snr,snf, v_anu,cr_anu,anu, v_tic,cr_tic,tic, v_det,cr_det,det, cl_rec,cl_via_rec,wave: Viatura;
+
+map 
+    add: Lista # Viatura -> Lista; 
+    remove: Lista # Viatura -> Lista;
+
+var lst: Lista;
+    v: Viatura;
+
+eqn (lst == []) -> remove(lst,v) = [];
+    (v != head(lst)) -> remove(lst,v) = [head(lst)] ++ remove(tail(lst),v);
+    (v == head(lst)) -> remove(lst,v) = tail(lst);
+
+    add(lst,v) = lst <| v;
+
+proc
+    Viaturas (lst: Lista) =
+        sum v:Viatura.((v in lst)==false) -> v_sai(v).S(add(lst,v));
+
+    S(lst: Lista) = 
+        sum v:Viatura.(v in lst) -> (
+            ( cl_via_rec(v).rec(v).v_snr(v).( fcr(v) + cl_via_rec(v).v_det(v).fcr(v) ).v_snf(v) ) +
+            ( v_alo(v).( v_snr(v).( fcr(v) + cl_via_rec(v).v_det(v).fcr(v) ).v_snf(v) + v_anu(v) ) ) +
+            v_tic(v) +
+            v_reg(v).(#lst>1) -> S(remove(lst,v)) <> Viaturas(remove(lst,v)) + 
+            Viaturas(lst)
+        ).S(lst);
+
+    Controlador(lst: Lista) =
+        sum v:Viatura.((v in lst)==false) -> cr_sai(v).C(add(lst,v));
+    
+    C(lst: Lista) = 
+        sum v:Viatura.(v in lst) -> (
+            ( cr_snr(v).( cr_det(v).cr_snf(v) + cr_snf(v) ) ) +
+            ( cr_alo(v).( cr_snr(v).( cr_det(v).cr_snf(v) + cr_snf(v) ) + cr_anu(v) ) ) + 
+            cr_tic(v) +
+            cr_reg(v).(#lst>1) -> C(remove(lst,v)) <> Controlador(remove(lst,v)) + 
+            Controlador(lst) 
+        ).C(lst);
+
+    Cliente = sum v:Viatura.cl_rec(v).Cliente;
+
+
+init
+     allow(
+       {sai,reg,rec,fcr,alo,snr,snf,anu,tic,det,wave},
+       comm(
+            { v_sai|cr_sai -> sai,          % Início de turno
+              v_reg|cr_reg -> reg,          % Fim de turno
+              v_snr|cr_snr -> snr,         % Início de corrida
+              v_snf|cr_snf -> snf,         % Fim de corrida
+              v_tic|cr_tic -> tic,            % Comunicação de localização
+              v_det|cr_det -> det,           % Táxi deteta potencial cliente
+              cl_rec|cl_via_rec -> wave,      % Cliente manda parar táxi
+              v_alo|cr_alo -> alo,         % Central agenda corrida de cliente
+              v_anu|cr_anu -> anu            % Anulação de serviço
+            },
+            Viaturas([]) || Controlador([]) || Cliente 
+     ) ) ;

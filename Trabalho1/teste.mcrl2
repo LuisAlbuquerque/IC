@@ -1,0 +1,3 @@
+act show: Nat;
+proc P = sum n: Nat. (n < 10) -> show(n) . P;
+init P;

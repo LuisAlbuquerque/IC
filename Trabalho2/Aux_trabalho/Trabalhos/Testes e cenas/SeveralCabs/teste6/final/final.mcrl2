@@ -1,0 +1,89 @@
+sort
+    Viatura = struct a|b|c|d;
+    Lista = List(Viatura);
+
+act
+    v_sai,cr_sai,v_reg,cr_reg,sai,reg, rec,fcr, v_alo,cr_alo,alo, v_snr,cr_snr,v_snf,cr_snf,snr,snf, v_anu,cr_anu,anu, v_tic,cr_tic,tic, v_det,cr_det,cl_det,det, cl_rec,cl_via_rec,wave : Viatura;
+
+map 
+    add: Lista # Viatura -> Lista; 
+    remove: Lista # Viatura -> Lista;
+
+var lst: Lista;
+    v: Viatura;
+
+eqn (lst == []) -> remove(lst,v) = [];
+    (v != head(lst)) -> remove(lst,v) = [head(lst)] ++ remove(tail(lst),v);
+    (v == head(lst)) -> remove(lst,v) = tail(lst);
+
+    add(lst,v) = lst <| v;
+
+proc
+  Viaturas (emServ: Lista,ocupado:Lista) =
+    sum v:Viatura.((v in emServ)==false) -> v_sai(v).S(add(emServ,v),ocupado);
+
+  S(emServ: Lista,ocupado:Lista) =
+    sum v:Viatura.(v in emServ) ->
+    (
+      ( 
+        ((v in ocupado)==false) -> 
+        (
+          cl_via_rec(v).v_snr(v).S(emServ,add(ocupado,v)) +
+          v_alo(v).( v_snr(v).S(emServ,add(ocupado,v)) + v_anu(v) ) +
+          ( v_reg(v).(#emServ>1) -> S(remove(emServ,v),ocupado) <> Viaturas(remove(emServ,v),ocupado) )
+        )
+        <>
+        ( 
+          fcr(v).S(emServ,remove(ocupado,v)) + 
+          v_det(v)
+        )
+      ) + 
+      Viaturas(emServ,ocupado) +
+      v_tic(v)
+    ).S(emServ,ocupado);
+
+
+
+  Controlador(emServ: Lista,ocupado:Lista) =
+      sum v:Viatura.((v in emServ)==false) -> cr_sai(v).C(add(emServ,v),ocupado);
+
+  C(emServ: Lista,ocupado:Lista) =
+    sum v:Viatura.(v in emServ) ->
+    (
+      ( 
+        ((v in ocupado)==false) -> 
+        (  
+          cr_snr(v).C(emServ,add(ocupado,v)) +
+          cr_alo(v).( cr_snr(v).C(emServ,add(ocupado,v)) + cr_anu(v) ) + 
+          ( cr_reg(v).(#emServ>1) -> C(remove(emServ,v),ocupado) <> Controlador(remove(emServ,v),ocupado) )
+        )
+        <>
+        ( 
+          cr_snf(v).C(emServ,remove(ocupado,v)) +
+          cr_det(v)
+        )
+      ) +
+      Controlador(emServ,ocupado) +
+      cr_tic(v)
+    ).C(emServ,ocupado);
+
+  
+  Cliente = sum v:Viatura.( cl_rec(v) + cl_det(v) ).Cliente;
+
+
+init
+     allow(
+       {sai,reg,alo,snr,snf,anu,tic,det,rec},
+       comm(
+            { v_sai|cr_sai -> sai,            % Início de turno
+              v_reg|cr_reg -> reg,            % Fim de turno
+              v_snr|cr_snr -> snr,            % Início de corrida
+              fcr|cr_snf -> snf,              % Fim de corrida
+              v_tic|cr_tic -> tic,            % Comunicação de localização
+              v_det|cr_det|cl_det -> det,     % Táxi deteta potencial cliente
+              cl_rec|cl_via_rec -> rec,       % Cliente manda parar táxi
+              v_alo|cr_alo -> alo,            % Central agenda corrida de cliente
+              v_anu|cr_anu -> anu             % Anulação de serviço
+            },
+            Viaturas([],[]) || Controlador([],[]) || Cliente
+     ) ) ;

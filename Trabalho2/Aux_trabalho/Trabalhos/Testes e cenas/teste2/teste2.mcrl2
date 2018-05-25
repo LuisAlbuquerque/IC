@@ -1,0 +1,46 @@
+sort
+    Viatura = struct one;
+    % Central;
+
+act
+    sai,conSai,reg,conReg,horario, rec, fcr, alo, snr,conSnr,snf,conSnf,contactaCentral, anu, tic,conTic,local, det,conDet,pextra: Viatura; % Ações da Viatura.
+    % sendCar; : Central; % Ações Central
+
+
+proc
+    Viaturas =
+        sai(one).Start.Viaturas;  % Start(num viatura)
+
+    Start =
+    (
+        ( rec(one).snr(one).( fcr(one) + det(one).fcr(one) ).snf(one) ) +
+        ( alo(one).( snr(one).( fcr(one) + det(one).fcr(one) ).snf(one) + anu(one) ) ) +
+        tic(one)
+    ).(reg(one) + Start);
+
+    Controlador =
+        conSai(one).ReceiverStart.Controlador;
+
+    ReceiverStart=
+    (
+        ( conSnr(one).( conDet(one).conSnf(one) + conSnf(one) ) ) +
+        %( conSnr(one).( conDet(one).conSnf(one) + conSnf(one) ) ) +   ++++++++++++++FOI AQUI A ALTERAÇÃO QUE DIMINUIU OS ESTADOS/TRANSIÇÕES
+        conTic(one)
+    ).(conReg(one) + ReceiverStart);
+
+
+init
+    %hide(
+    %  {},
+      allow(
+        {horario,rec,fcr,alo,contactaCentral,anu,local,pextra},
+        comm(
+            { sai|conSai -> horario,
+              reg|conReg -> horario,
+              snr|conSnr -> contactaCentral,
+              snf|conSnf -> contactaCentral,
+              tic|conTic -> local,
+              det|conDet -> pextra
+            },
+            Viaturas || Controlador
+     ) ) ;
