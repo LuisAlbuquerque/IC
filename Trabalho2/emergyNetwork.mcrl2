@@ -1,0 +1,98 @@
+sort
+    % tipos de viaturas:
+    Viaturas = struct carros | ambulancia;
+
+    % recursos da brigada:
+    Recursos = List(Viaturas);
+
+    % niveis de emergencia:
+    Emergencia = struct um | dois;
+
+    % Ocorrencias:
+    Ocorrencias = List(Emergencia);
+
+act
+% accoes que podem ser feitas:
+
+    % gerir as emergencias que chegam à central
+    gerir_ocorrencias : Recursos # Ocorrencias; 
+
+    % sair da estaçao para a emergencia
+        % (se quisermos complicar, podemos fazer com que 
+        %  uma viatura que tenha ido a uma emergencia,
+        %  possa ir a outra, sem antes passar pela central ).
+    viagem_a_emergencia : Viaturas # Emergencia;
+
+    # sair da emergencia e voltar para a central
+    emergencia_central : Viaturas;
+
+map
+    % sair da central, retirar uma viatura da Central:
+    sair_da_central : Viaturas # Recursos;
+
+    % chegar à central, addicionar uma viatura à Central:
+    chegar_a_central : Viaturas # Recursos;
+
+var
+    r: Recursos;
+    v: Viaturas
+    e: Emergencia;
+    o: Ocorrencias;
+
+eqn
+    % ------- sair da central -----------
+
+        % usar uma guarda, para o caso de ser lista vazia
+    (r == []) -> sair_da_central(v,r) = [];
+
+        % vereficar se a primeira viatura é do mesmo tipo da pertendida
+    (v == head(r)) -> sair_da_central(v,r) = tail(r); 
+
+        % caso nao seja a primeira, chama-se recursivamente para a o resto da lista
+    sair_da_central(v,r) = [head(r)] ++ sair_da_central(v,tail(r)); 
+    
+    % ------------------------------------
+
+    % ------- chegar da central ---------
+
+        % acrescentar à cabeça da lista.
+    chegar_a_central(v,r) = [v] ++ r;
+
+    % -----------------------------------
+
+    % ------ receber uma occorencia -----
+
+        % acrescentar à cabeça da lista.
+    receber_ocorencia(e,o) = [e] ++ o;
+
+    % -----------------------------------
+
+    % ------- resolver uma occencia  ------
+
+        % usar uma guarda, para o caso de ser lista vazia
+    (o == []) -> resolver_ocoreencia(e,o) = [];
+
+        % vereficar se a primeira emergencia é do mesmo tipo da pertendida
+    (e == head(o)) -> resolver_ocoreencia(e,o) = tail(o); 
+
+        % caso nao seja a primeira, chama-se recursivamente para a o resto da lista
+    resolver_ocoreencia(e,o) = [head(o)] ++ resolver_ocoreencia(e,tail(o)); 
+    
+    % ------------------------------------
+
+
+
+
+proc
+    
+    viagem_a_emergencia( viatura: Viaturas, emergencia: Emergencia) = 
+        
+
+
+    emergencia_central (viatura: Viaturas) = 
+            
+
+    gerir_ocorrencias(viaturas: Viaturas, emergencias : Ocorrencias) =
+        
+    
+
