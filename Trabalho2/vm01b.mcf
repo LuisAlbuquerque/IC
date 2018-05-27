@@ -1,0 +1,3 @@
+% a emerg is always possible (false)
+
+[ true* ] < emerg > true

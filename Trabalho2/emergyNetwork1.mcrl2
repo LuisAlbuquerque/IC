@@ -1,0 +1,29 @@
+sort 
+     Viaturas = struct Amb1|Amb2 | car| police;
+     Emergencia = struct People | Fire | Robbery;
+
+act
+  recebe, aciona, emrg: Emergencia ;
+  v_acc, v_sai, out, v_infr, v_reg, reg: Viaturas;
+  emerg;
+
+proc
+  Central =
+    recebe(People).(sum a:Viaturas.(a==Amb1 || a==Amb2) ->(v_acc(a).emerg.(sum v:Viaturas.(v!=a && (v!=car && v!=police))->(v_acc(v).v_infr(v))+recebe(People).emerg) . v_infr(a))).Central +
+    recebe(Fire).(v_acc(car) . v_infr(car) ).Central+
+    recebe(Robbery).(v_acc(police) . v_infr(police)).Central;
+
+  Viagem =
+    aciona(People).(sum a:Viaturas.(a==Amb1 || a==Amb2)->(v_sai(a).(sum v:Viaturas.(v!=a && (v!=car && v!=police))->(v_sai(v).v_reg(v)) + aciona(People)) . v_reg(a))).Viagem +
+    aciona(Fire).( v_sai(car) . v_reg(car)).Viagem+
+    aciona(Robbery).( v_sai(police) . v_reg(police)).Viagem;
+
+init
+  allow(
+    { emrg, out, reg,emerg},
+    comm(
+      { recebe|aciona -> emrg,
+        v_acc|v_sai -> out,
+        v_infr|v_reg -> reg },
+      Central || Viagem
+  ) ) ;
