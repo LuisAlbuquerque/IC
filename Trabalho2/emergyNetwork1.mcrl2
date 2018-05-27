@@ -1,29 +1,59 @@
 sort 
-     Viaturas = struct Amb1|Amb2 | car| police;
+     Viaturas = struct car| police;
+
+     Ambulancias= struct a|b;
+     Lista= List(Ambulancias);
+
      Emergencia = struct People | Fire | Robbery;
 
 act
   recebe, aciona, emrg: Emergencia ;
   v_acc, v_sai, out, v_infr, v_reg, reg: Viaturas;
+  v_saib, v_accb, outb, v_infrb, v_regb, regb:Ambulancias;
   emerg;
+map
+  add: Lista # Ambulancias ->Lista;
+  remove: Lista # Ambulancias ->Lista;
+
+var
+  lst: Lista;
+  a: Ambulancias;
+
+eqn
+
+    (lst == []) -> remove(lst,a) = [];
+    (a != head(lst)) -> remove(lst,a) = [head(lst)] ++ remove(tail(lst),a);
+    (a == head(lst)) -> remove(lst,a) = tail(lst);
+
+
+    add(lst,a) = lst <| a;
 
 proc
-  Central =
-    recebe(People).(sum a:Viaturas.(a==Amb1 || a==Amb2) ->(v_acc(a).emerg.(sum v:Viaturas.(v!=a && (v!=car && v!=police))->(v_acc(v).v_infr(v))+recebe(People).emerg) . v_infr(a))).Central +
-    recebe(Fire).(v_acc(car) . v_infr(car) ).Central+
-    recebe(Robbery).(v_acc(police) . v_infr(police)).Central;
 
-  Viagem =
-    aciona(People).(sum a:Viaturas.(a==Amb1 || a==Amb2)->(v_sai(a).(sum v:Viaturas.(v!=a && (v!=car && v!=police))->(v_sai(v).v_reg(v)) + aciona(People)) . v_reg(a))).Viagem +
-    aciona(Fire).( v_sai(car) . v_reg(car)).Viagem+
-    aciona(Robbery).( v_sai(police) . v_reg(police)).Viagem;
+
+  
+  Central(emEmergencia:Lista) =
+    recebe(People).(sum a:Ambulancias.((a in emEmergencia)==false)->(v_accb(a).emerg.Central(add(emEmergencia,a)))
+	           <>
+		  ((a in emEmergencia)==true)->(v_infrb(a).Central(remove(emEmergencia,a))))+
+    recebe(Fire).(v_acc(car).emerg . v_infr(car) ).Central(emEmergencia)+
+    recebe(Robbery).(v_acc(police).emerg . v_infr(police)).Central(emEmergencia);
+
+  Viagem(emEmergencia:Lista) =
+    aciona(People).(sum a:Ambulancias.((a in emEmergencia)==false)->(v_saib(a).Viagem(add(emEmergencia,a)))
+	          <>
+		 ((a in emEmergencia)==true)->(v_regb(a).Viagem(remove(emEmergencia,a))))+
+    aciona(Fire).( v_sai(car) . v_reg(car)).Viagem(emEmergencia)+
+    aciona(Robbery).( v_sai(police) . v_reg(police)).Viagem(emEmergencia);
 
 init
   allow(
-    { emrg, out, reg,emerg},
+    { emrg, out, reg,outb,regb,emerg},
     comm(
       { recebe|aciona -> emrg,
         v_acc|v_sai -> out,
-        v_infr|v_reg -> reg },
-      Central || Viagem
+        v_infr|v_reg -> reg,
+        v_accb|v_saib-> outb,
+        v_infrb|v_regb -> regb },
+      Central([]) || Viagem([])
   ) ) ;
